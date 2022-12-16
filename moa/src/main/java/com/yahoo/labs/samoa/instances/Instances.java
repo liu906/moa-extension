@@ -59,7 +59,7 @@ public class Instances implements Serializable {
     /**
      * A Hash that stores the indices of features.
      */
-    protected HashMap<String, Integer> hsAttributesIndices;
+    public HashMap<String, Integer> hsAttributesIndices;
 
     /**
      * Indices of relevant features.
