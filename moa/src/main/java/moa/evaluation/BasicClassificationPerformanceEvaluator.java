@@ -30,6 +30,7 @@ import moa.core.Utils;
 
 import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.Prediction;
+import com.yahoo.labs.samoa.instances.InstanceImpl;
 import moa.options.AbstractOptionHandler;
 import moa.tasks.TaskMonitor;
 
@@ -115,6 +116,7 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     @Override
     public void addResult(Example<Instance> example, double[] classVotes) {
         Instance inst = example.getData();
+        //
         double weight = inst.weight();
         if (inst.classIsMissing() == false) {
             int trueClass = (int) inst.classValue();
@@ -130,6 +132,8 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                     this.columnKappa[i].add(trueClass == i ? weight : 0);
                     // for both precision and recall, NaN values are used to 'balance' the number
                     // of instances seen across classes
+                    // Xutong Liu: but those NaN values cause estimator function get NaN result under AdwinClassificationPerformanceEvaluator
+                    // How can I fix it?
                     if (predictedClass == i) {
                         precision[i].add(predictedClass == trueClass ? weight : 0.0);
                     } else precision[i].add(Double.NaN);

@@ -37,8 +37,9 @@ public class InstanceImpl implements MultiLabelInstance {
     /**
      * The instance information.
      */
-    protected InstancesHeader instanceHeader;
-
+    // TODO check if is ok to change protected to public
+    // protected InstancesHeader instanceHeader;
+    public InstancesHeader instanceHeader;
     /**
      * Instantiates a new instance.
      *
