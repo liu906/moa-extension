@@ -383,6 +383,7 @@ public class ADWIN extends AbstractMOAObject {
     }
 
     private void insertElement(double Value) {
+        //the action to NaN should be the same with BasicEvaluator
         //TODO: what if Value is NaN
         WIDTH++;
         insertElementBucket(0, Value, listRowBuckets.head());
