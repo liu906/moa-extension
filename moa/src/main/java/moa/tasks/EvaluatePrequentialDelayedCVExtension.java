@@ -287,21 +287,13 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             
             
             Example trainInst = stream.nextInstance();
-            //TODO: check whether this way to delete date is work
+
             if(dateIndex != dateIndexOption.getMinValue()){
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(dateIndex);
                 ((InstanceExample)trainInst).getData().deleteAttributeAt(dateIndex);
             }
 
-            //((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.instanceInformation.deleteAttributeAt(0);
-            //((InstanceExample)trainInst).getData().deleteAttributeAt(0);
-            //((InstanceImpl) ((InstanceExample)trainInst).getData()).instanceHeader.hsAttributesIndices.remove(timestampKey);
-            //((InstanceImpl) ((InstanceExample)trainInst).getData()).instanceHeader.setClassIndex(((InstanceImpl) ((InstanceExample)trainInst).getData()).instanceHeader.classIndex()-1);
-
             Example testInst = (Example) trainInst;
-
-            //TODO:
-            //inst.deleteAttributeAt(1);
 
             instancesProcessed++;
             for (int i = 0; i < learners.length; i++) {

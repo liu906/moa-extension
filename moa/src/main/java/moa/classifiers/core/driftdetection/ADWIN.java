@@ -15,7 +15,7 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program. If not, see <http://www.gnu.org/licenses/>.
- *    
+ *
  */
 package moa.classifiers.core.driftdetection;
 
@@ -263,8 +263,6 @@ public class ADWIN extends AbstractMOAObject {
         //		 containing the given value.
         this(element, null);
         }
-
-
         public Object value() {
         //			 post: returns the element in this node
         return this.data;
@@ -383,10 +381,6 @@ public class ADWIN extends AbstractMOAObject {
     }
 
     private void insertElement(double Value) {
-        //the action to NaN should be the same with BasicEvaluator
-        //test username
-        // is that ok now?
-        //TODO: what if Value is NaN
         WIDTH++;
         insertElementBucket(0, Value, listRowBuckets.head());
         double incVariance = 0;
