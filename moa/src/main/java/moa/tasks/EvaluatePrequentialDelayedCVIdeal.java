@@ -118,7 +118,8 @@ import java.util.Random;
  * @author Xutong Liu (xryu@smail.nju.edu.cn)
  *
  */
-public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
+public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
+
 
     @Override
     public String getPurposeString() {
@@ -143,7 +144,7 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
     public IntOption delayLengthOption = new IntOption("delay", 'k',
             "Number of instances before test instance is used for training",
             1000, 1, Integer.MAX_VALUE);
-     
+
     public IntOption instanceLimitOption = new IntOption("instanceLimit", 'i',
             "Maximum number of instances to test/train on  (-1 = no limit).",
             100000000, -1, Integer.MAX_VALUE);
@@ -174,11 +175,11 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
             Integer.MAX_VALUE);
     public IntOption positiveFeedBackTimeOption = new IntOption(
             "positiveFeedBackTimeLimit", 'P',
-            "how long between instances be predicted as positive and get their observed labels", 86400*7, 0,
+            "how long between instances be predicted as positive and get their observed labels", 0, 0,
             Integer.MAX_VALUE);
     public IntOption negativeFeedBackTimeOption = new IntOption(
             "negativeFeedBackTimeLimit", 'N',
-            "how long between instances be predicted as negative and get their observed labels", 86400*7, 0,
+            "how long between instances be predicted as negative and get their observed labels", 0, 0,
             Integer.MAX_VALUE);
 
     public FileOption dumpFileOption = new FileOption("dumpFile", 'd',
@@ -206,7 +207,7 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
 
     // Buffer of instances to use for training.
     // Note: It is a list of lists because it stores instances per learner, e.g.
-    // CV of 10, would be 10 lists of buffered instances for delayed training. 
+    // CV of 10, would be 10 lists of buffered instances for delayed training.
     protected LinkedList<LinkedList<Example>> trainInstances;
     protected LinkedList<LinkedList<Example>> positiveTrainInstances;
     protected LinkedList<LinkedList<Example>> negativeTrainInstances;
@@ -220,11 +221,7 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
 
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
-
         int feedbackIndex= this.feedbackIndexOption.getValue();
-
-
-
         Random random = new Random(this.randomSeedOption.getValue());
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
 
@@ -344,7 +341,6 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
             //然后立马evaluated
             //随后train by it
             for (int i = 0; i < learners.length; i++) {
-
                 //分配实例给每个fold
                 int k = 1;
                 switch (this.validationMethodologyOption.getChosenIndex()) {
@@ -376,61 +372,63 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
                 }
                 boolean isEvaluated = false;
 
-                //如果时间不到但是feedback instance到了
-
-                    //in this case, observed label
-                    int indexOfLabelledPosInstance = this.positiveTrainTimestamps.get(i).indexOf(feedbackValue);
-                    int indexOfLabelledNegInstance = this.negativeTrainTimestamps.get(i).indexOf(feedbackValue);
-                    if(Math.max(indexOfLabelledNegInstance,indexOfLabelledPosInstance)!=-1){
-                        if(indexOfLabelledPosInstance!=-1){
-                            int observedLabel = stream.getHeader().numClasses();
-                            isEvaluated = true;
-                            Example trainInstI = this.positiveTrainInstances.get(i).get(indexOfLabelledPosInstance);
-                            this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
-                            this.positiveTrainTimestamps.get(i).remove(indexOfLabelledPosInstance);
-                            //TODO:get observed label
-                            ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
-                            evaluators[i].addResult(trainInstI, prediction);
-                            learners[i].trainOnInstance(trainInstI);
-                            instancesProcessed++;
-                        }else if(indexOfLabelledNegInstance!=-1){
-                            isEvaluated = true;
-                            Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
-                            this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
-                            this.negativeTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
-                            //TODO:get observed label
-                            ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
-                            evaluators[i].addResult(trainInstI, prediction);
-                            learners[i].trainOnInstance(trainInstI);
-                            instancesProcessed++;
-                        }
-                    }
-
-                    if (this.positiveTrainTimestamps.get(i).size() != 0 &&
-                            this.positiveFeedBackTimeOption.getValue() <=
-                                    (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                //如果时间不到但是feedback instance到了. in this case, observed label is true label
+                int indexOfLabelledPosInstance = this.positiveTrainTimestamps.get(i).indexOf(feedbackValue);
+                int indexOfLabelledNegInstance = this.negativeTrainTimestamps.get(i).indexOf(feedbackValue);
+                if(Math.max(indexOfLabelledNegInstance,indexOfLabelledPosInstance)!=-1){
+                    if(indexOfLabelledPosInstance!=-1){
+                        int observedLabel = stream.getHeader().numClasses();
                         isEvaluated = true;
-                        Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
-                        this.positiveTrainTimestamps.get(i).removeFirst();
+                        Example trainInstI = this.positiveTrainInstances.get(i).get(indexOfLabelledPosInstance);
+                        this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
+                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledPosInstance);
                         //TODO:get observed label
-                        ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
-                        evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
+//                        ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
+                        evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
                         instancesProcessed++;
-                    }
-
-                    if(this.negativeTrainTimestamps.get(i).size() != 0 &&
-                            this.negativeFeedBackTimeOption.getValue() <=
-                                    (Integer.valueOf(trainInstTimestamp)  - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
-                        Example trainInstI = this.negativeTrainInstances.get(i).removeFirst();
-                        this.negativeTrainTimestamps.get(i).removeFirst();
+                        Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
+                        this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
+                        this.negativeTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
                         //TODO:get observed label
-                        ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
+//                        ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
                         instancesProcessed++;
                     }
+                }
+
+                /* 到时间了就从positiveInstances队列取出来一个赋予他observed label. in this case, observed label is negative
+                然后立马evaluated
+                随后train by it*/
+                if (this.positiveTrainTimestamps.get(i).size() != 0 &&
+                        this.positiveFeedBackTimeOption.getValue() <=
+                                (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    isEvaluated = true;
+                    Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
+                    this.positiveTrainTimestamps.get(i).removeFirst();
+                    //TODO:get observed label
+//                    ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
+                    evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
+                    learners[i].trainOnInstance(trainInstI);
+                    instancesProcessed++;
+                }
+
+                if(this.negativeTrainTimestamps.get(i).size() != 0 &&
+                        this.negativeFeedBackTimeOption.getValue() <=
+                                (Integer.valueOf(trainInstTimestamp)  - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    isEvaluated = true;
+                    Example trainInstI = this.negativeTrainInstances.get(i).removeFirst();
+                    this.negativeTrainTimestamps.get(i).removeFirst();
+                    //TODO:get observed label
+//                    ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
+                    evaluators[i].addResult(trainInstI, prediction);
+                    learners[i].trainOnInstance(trainInstI);
+                    instancesProcessed++;
+                }
+
 
                 if (isEvaluated){
                     long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
@@ -469,7 +467,44 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
                     }
                 }
             }
+            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+                    || stream.hasMoreInstances() == false)) {
+                long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
+                double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
+                double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
 
+                for (int i = 0; i < learners.length; i++) {
+                    double RAMHoursIncrement = learners[i].measureByteSize() / (1024.0 * 1024.0 * 1024.0); //GBs
+                    RAMHoursIncrement *= (timeIncrement / 3600.0); //Hours
+                    RAMHours += RAMHoursIncrement;
+                }
+
+                lastEvaluateStartTime = evaluateTime;
+                learningCurve.insertEntry(new LearningEvaluation(
+                        getEvaluationMeasurements(
+                                new Measurement[]{
+                                        new Measurement(
+                                                "learning evaluation instances",
+                                                instancesProcessed),
+                                        new Measurement(
+                                                "evaluation time ("
+                                                        + (preciseCPUTiming ? "cpu "
+                                                        : "") + "seconds)",
+                                                time),
+                                        new Measurement(
+                                                "model cost (RAM-Hours)",
+                                                RAMHours)
+                                }, evaluators)));
+
+                if (immediateResultStream != null) {
+                    if (firstDump) {
+                        immediateResultStream.println(learningCurve.headerToString());
+                        firstDump = false;
+                    }
+                    immediateResultStream.println(learningCurve.entryToString(learningCurve.numEntries() - 1));
+                    immediateResultStream.flush();
+                }
+            }
 
             if (instancesProcessed != 0 && instancesProcessed % INSTANCES_BETWEEN_MONITOR_UPDATES == 0) {
                 if (monitor.taskShouldAbort()) {
@@ -536,7 +571,7 @@ public class EvaluatePrequentialDelayedIdeal extends ClassificationMainTask {
 
         if (subEvaluator != null) {
             subMeasurements.add(subEvaluator.getPerformanceMeasurements());
-           // Measurement[] avgMeasurements = Measurement.averageMeasurements(subMeasurements.toArray(new Measurement[subMeasurements.size()][]));
+            // Measurement[] avgMeasurements = Measurement.averageMeasurements(subMeasurements.toArray(new Measurement[subMeasurements.size()][]));
 
             measurementList.addAll(Arrays.asList(subMeasurements.get(0)));
         }
