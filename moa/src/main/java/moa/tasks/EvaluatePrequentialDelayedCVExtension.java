@@ -24,7 +24,7 @@ package moa.tasks;
 import com.github.javacliparser.FileOption;
 import com.github.javacliparser.IntOption;
 import com.github.javacliparser.MultiChoiceOption;
-import com.yahoo.labs.samoa.instances.Instance;
+//import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.InstanceImpl;
 import moa.classifiers.MultiClassClassifier;
 import moa.core.*;
@@ -169,8 +169,9 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             Integer.MAX_VALUE);
 
     public IntOption feedbackIndexOption = new IntOption(
-            "feedbackIndex", 'F',
-            "feedback index in the data stream. note that feedback column will be deleted before training. -1 means no date column in the stream. -1 as default", -1, -1,
+            "feedbackIndex", 'A',
+            "feedback index in the data stream. note that feedback column will be deleted before training. " +
+                    "-1 means no date column in the stream. -1 as default", -1, -1,
             Integer.MAX_VALUE);
     public IntOption positiveFeedBackTimeOption = new IntOption(
             "positiveFeedBackTimeLimit", 'P',
@@ -221,7 +222,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         int evaluationCode = 2;
-        int feedbackIndex= this.feedbackIndexOption.getValue();
+      //  int feedbackIndex= this.feedbackIndexOption.getValue();
+        int feedbackIndex = 1;
 
 
         Random random = new Random(this.randomSeedOption.getValue());
@@ -327,14 +329,13 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(dateIndex);
                 ((InstanceExample)trainInst).getData().deleteAttributeAt(dateIndex);
             }
-            String feedbackValue = ((InstanceExample) trainInst).instance.stringValue(feedbackIndex);
+
+            String feedbackValue = ((InstanceExample) trainInst).instance.stringValue(feedbackIndex-1);
             if(feedbackIndex != feedbackIndexOption.getMinValue()){
-                ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(feedbackIndex);
+                ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(feedbackIndex-1);
                 ((InstanceExample)trainInst).getData().deleteAttributeAt(feedbackIndex);
             }
-            Example testInst = (Example) trainInst;
-
-
+            //Example testInst = (Example) trainInst;
 
 
             //分配实例给每个fold
@@ -360,7 +361,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 }
 
                 //test it 拿到它的predicted label
-                double[] prediction = learners[i].getVotesForInstance(testInst);
+                double[] prediction = learners[i].getVotesForInstance(trainInst);
                 int predictedClass = Utils.maxIndex(prediction);
 
 
@@ -378,8 +379,9 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
 
                 //如果时间不到但是feedback instance到了
                 //TODO:get observed label
-                Instance inst = (Instance) testInst.getData();
-                int trueClass = (int) inst.classValue();
+
+
+
                 if (evaluationCode == 1){
 
                 } else if (evaluationCode == 2) {
@@ -390,15 +392,17 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         //TODO: observed label
                         int observedLabel = stream.getHeader().numClasses();
                         isEvaluated = true;
-                        Example trainInstI = this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
+                        Example trainInstI = this.positiveTrainInstances.get(i).get(indexOfLabelledPosInstance);
+                        this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
                         this.positiveTrainTimestamps.get(i).remove(indexOfLabelledPosInstance);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
                         instancesProcessed++;
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
-                        Example trainInstI = this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
-                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
+                        Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
+                        this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
+                        this.negativeTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
                         instancesProcessed++;
@@ -412,15 +416,12 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
                 //然后立马evaluated
                 //随后train by it
-
                 if (this.positiveTrainTimestamps.get(i).size() != 0 &&
                         this.positiveFeedBackTimeOption.getValue() <=
                                 (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
                     isEvaluated = true;
                     Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
                     this.positiveTrainTimestamps.get(i).removeFirst();
-
-
                     evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
                     learners[i].trainOnInstance(trainInstI);
                     instancesProcessed++;
