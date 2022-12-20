@@ -167,6 +167,15 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             "date index in the data stream. -1 means no date column in the stream. -1 as default", -1, -1,
             Integer.MAX_VALUE);
 
+    public IntOption positiveFeedBackTimeOption = new IntOption(
+            "positiveFeedBackTimeLimit", 'P',
+            "how long between instances be predicted as positive and get their observed labels", 86400*7, 0,
+            Integer.MAX_VALUE);
+    public IntOption negativeFeedBackTimeOption = new IntOption(
+            "negativeFeedBackTimeLimit", 'N',
+            "how long between instances be predicted as negative and get their observed labels", 86400*7, 0,
+            Integer.MAX_VALUE);
+
     public FileOption dumpFileOption = new FileOption("dumpFile", 'd',
             "File to append intermediate csv results to.", null, "csv", true);
 
@@ -187,11 +196,18 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
     public IntOption randomSeedOption = new IntOption("randomSeed", 'r',
             "Seed for random behaviour of the task.", 1);
 
-    // Buffer of instances to use for training. 
+    protected int positiveClass = 1;
+    protected int negativeClass = 0;
+
+    // Buffer of instances to use for training.
     // Note: It is a list of lists because it stores instances per learner, e.g.
     // CV of 10, would be 10 lists of buffered instances for delayed training. 
     protected LinkedList<LinkedList<Example>> trainInstances;
-    
+    protected LinkedList<LinkedList<Example>> positiveTrainInstances;
+    protected LinkedList<LinkedList<Example>> negativeTrainInstances;
+    protected LinkedList<LinkedList<String>> trainTimestamps;
+    protected LinkedList<LinkedList<String>> positiveTrainTimestamps;
+    protected LinkedList<LinkedList<String>> negativeTrainTimestamps;
     @Override
     public Class<?> getTaskResultType() {
         return LearningCurve.class;
@@ -207,6 +223,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         Learner baseLearner = (Learner) getPreparedClassOption(this.learnerOption);
         baseLearner.resetLearning();
 
+        /* evaluating */
         LearningPerformanceEvaluator[] evaluators = new LearningPerformanceEvaluator[this.numFoldsOption.getValue()];
         LearningPerformanceEvaluator baseEvaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
         for (int i = 0; i < learners.length; i++) {
@@ -230,10 +247,23 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         int dateIndex = this.dateIndexOption.getValue();
 
         this.trainInstances = new LinkedList<LinkedList<Example>>();
-        
+        this.positiveTrainInstances = new LinkedList<LinkedList<Example>>();
+        this.negativeTrainInstances = new LinkedList<LinkedList<Example>>();
+        this.trainTimestamps = new LinkedList<LinkedList<String>>();
+        this.positiveTrainTimestamps = new LinkedList<LinkedList<String>>();
+        this.negativeTrainTimestamps = new LinkedList<LinkedList<String>>();
+
+
         for(int i = 0; i < learners.length; i++) {
             this.trainInstances.add(new LinkedList<Example>());
+            this.positiveTrainInstances.add(new LinkedList<Example>());
+            this.negativeTrainInstances.add(new LinkedList<Example>());
+
+            this.trainTimestamps.add(new LinkedList<String>());
+            this.positiveTrainTimestamps.add(new LinkedList<String>());
+            this.negativeTrainTimestamps.add(new LinkedList<String>());
         }
+
         File dumpFile = this.dumpFileOption.getFile();
         File dumpFoldFile = this.dumpFoldFileOption.getFile();
 
@@ -254,8 +284,6 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         }
 
         boolean firstDump = true;
-
-        //TODO: test
         PrintStream immediateFoldResultStream = null;
         if (dumpFoldFile != null) {
             try {
@@ -271,9 +299,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         "Unable to open immediate result file: " + dumpFoldFile, ex);
             }
         }
-
         boolean firstFoldDump = true;
-
 
 
         boolean preciseCPUTiming = TimingUtils.enablePreciseTiming();
@@ -287,20 +313,25 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             
             
             Example trainInst = stream.nextInstance();
-
+            String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(0);
             if(dateIndex != dateIndexOption.getMinValue()){
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(dateIndex);
                 ((InstanceExample)trainInst).getData().deleteAttributeAt(dateIndex);
             }
-
             Example testInst = (Example) trainInst;
 
-            instancesProcessed++;
+
+
+
+            //分配实例给每个fold
+            //test it 拿到它的predicted label
+            //if predicted label==positive then positiveQueue.add(instance) else negativeQueue.add(instances)
+            //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
+            //然后立马evaluated
+            //随后train by it
             for (int i = 0; i < learners.length; i++) {
-                
-                double[] prediction = learners[i].getVotesForInstance(testInst);
-                evaluators[i].addResult(testInst, prediction);
-                
+
+                //分配实例给每个fold
                 int k = 1;
                 switch (this.validationMethodologyOption.getChosenIndex()) {
                     case 0: //Cross-Validation;
@@ -313,17 +344,53 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         k = instancesProcessed % learners.length == i ? 1: 0; //Test only one
                         break;
                 }
+
+                //test it 拿到它的predicted label
+                double[] prediction = learners[i].getVotesForInstance(testInst);
+                int predictedClass = Utils.maxIndex(prediction);
+
+
+                //if predicted label==positive then positiveQueue.add(instance) else negativeQueue.add(instances)
                 if (k > 0) {
-                    this.trainInstances.get(i).addLast(trainInst);
+                    if(predictedClass==positiveClass){
+                        this.positiveTrainInstances.get(i).addLast(trainInst);
+                        this.positiveTrainTimestamps.get(i).addLast(trainInstTimestamp);
+                    }else{
+                        this.negativeTrainInstances.get(i).addLast(trainInst);
+                        this.negativeTrainTimestamps.get(i).addLast(trainInstTimestamp);
+                    }
                 }
-                if(this.delayLengthOption.getValue() < this.trainInstances.get(i).size()) {
-                    Example trainInstI = this.trainInstances.get(i).removeFirst();
+
+                //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
+                //然后立马evaluated
+                //随后train by it
+
+                if (this.positiveTrainTimestamps.get(i).size() != 0 &&
+                        this.positiveFeedBackTimeOption.getValue() <
+                                (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
+                    this.positiveTrainTimestamps.get(i).removeFirst();
+                    //TODO: evaluator里面应该带timestamp
+                    //TODO: test改写后的逻辑
+                    evaluators[i].addResult(testInst, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
                     learners[i].trainOnInstance(trainInstI);
+                    instancesProcessed++;
+                }
+
+                if(this.negativeTrainTimestamps.get(i).size() != 0 &&
+                        this.negativeFeedBackTimeOption.getValue() <
+                                (Integer.valueOf(trainInstTimestamp)  - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    Example trainInstI = this.negativeTrainInstances.get(i).removeFirst();
+                    this.negativeTrainTimestamps.get(i).removeFirst();
+                    evaluators[i].addResult(testInst, prediction);
+                    learners[i].trainOnInstance(trainInstI);
+                    instancesProcessed++;
                 }
             }
-            
-            if (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
-                    || stream.hasMoreInstances() == false) {
+            //System.out.println("instancesProcessed: "+String.valueOf(instancesProcessed));
+
+            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+                    || stream.hasMoreInstances() == false)) {
                 long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                 double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
                 double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
@@ -360,7 +427,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     immediateResultStream.flush();
                 }
 
-                //TODO:test
+
                 int fold = 1;
                 for (LearningPerformanceEvaluator evaluator : evaluators) {
                     learningFoldCurve.insertEntry(new LearningEvaluation(
@@ -390,11 +457,11 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     }
                     fold = fold + 1;
                 }
-                //TODO: test end
+
 
 
             }
-            if (instancesProcessed % INSTANCES_BETWEEN_MONITOR_UPDATES == 0) {
+            if (instancesProcessed != 0 && instancesProcessed % INSTANCES_BETWEEN_MONITOR_UPDATES == 0) {
                 if (monitor.taskShouldAbort()) {
                     return null;
                 }
@@ -420,11 +487,9 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             immediateResultStream.close();
         }
 
-        //TODO test
         if (immediateFoldResultStream != null) {
             immediateFoldResultStream.close();
         }
-        //TODO end test
 
         return learningCurve;
     }

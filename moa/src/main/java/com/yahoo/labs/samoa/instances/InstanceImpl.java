@@ -15,6 +15,7 @@
  */
 package com.yahoo.labs.samoa.instances;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 
 /**
@@ -37,7 +38,7 @@ public class InstanceImpl implements MultiLabelInstance {
     /**
      * The instance information.
      */
-    // TODO check if is ok to change protected to public
+
     // protected InstancesHeader instanceHeader;
     public InstancesHeader instanceHeader;
     /**
@@ -246,7 +247,8 @@ public class InstanceImpl implements MultiLabelInstance {
      */
     @Override
     public String stringValue(int i) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        Double dvalue = this.instanceData.value(i);
+        return String.valueOf(dvalue.longValue());
     }
 
     /**
