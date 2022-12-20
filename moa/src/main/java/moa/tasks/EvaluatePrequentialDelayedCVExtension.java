@@ -341,7 +341,6 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             //然后立马evaluated
             //随后train by it
             for (int i = 0; i < learners.length; i++) {
-
                 //分配实例给每个fold
                 int k = 1;
                 switch (this.validationMethodologyOption.getChosenIndex()) {
@@ -468,7 +467,44 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     }
                 }
             }
+            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+                    || stream.hasMoreInstances() == false)) {
+                long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
+                double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
+                double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
 
+                for (int i = 0; i < learners.length; i++) {
+                    double RAMHoursIncrement = learners[i].measureByteSize() / (1024.0 * 1024.0 * 1024.0); //GBs
+                    RAMHoursIncrement *= (timeIncrement / 3600.0); //Hours
+                    RAMHours += RAMHoursIncrement;
+                }
+
+                lastEvaluateStartTime = evaluateTime;
+                learningCurve.insertEntry(new LearningEvaluation(
+                        getEvaluationMeasurements(
+                                new Measurement[]{
+                                        new Measurement(
+                                                "learning evaluation instances",
+                                                instancesProcessed),
+                                        new Measurement(
+                                                "evaluation time ("
+                                                        + (preciseCPUTiming ? "cpu "
+                                                        : "") + "seconds)",
+                                                time),
+                                        new Measurement(
+                                                "model cost (RAM-Hours)",
+                                                RAMHours)
+                                }, evaluators)));
+
+                if (immediateResultStream != null) {
+                    if (firstDump) {
+                        immediateResultStream.println(learningCurve.headerToString());
+                        firstDump = false;
+                    }
+                    immediateResultStream.println(learningCurve.entryToString(learningCurve.numEntries() - 1));
+                    immediateResultStream.flush();
+                }
+            }
 
             if (instancesProcessed != 0 && instancesProcessed % INSTANCES_BETWEEN_MONITOR_UPDATES == 0) {
                 if (monitor.taskShouldAbort()) {
