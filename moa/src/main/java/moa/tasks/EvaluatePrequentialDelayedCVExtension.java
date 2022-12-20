@@ -314,12 +314,12 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         long evaluateStartTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
         long lastEvaluateStartTime = evaluateStartTime;
         double RAMHours = 0.0;
-        
+
         while (stream.hasMoreInstances()
                 && ((maxInstances < 0) || (instancesProcessed < maxInstances))
                 && ((maxSeconds < 0) || (secondsElapsed < maxSeconds))) {
-            
-            
+
+
             Example trainInst = stream.nextInstance();
 
             String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(dateIndex);
@@ -380,35 +380,34 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 //TODO:get observed label
                 Instance inst = (Instance) testInst.getData();
                 int trueClass = (int) inst.classValue();
-//                if (evaluationCode == 1){
-//
-//                } else if (evaluationCode == 2) {
-//                    int indexOfLabelledPosInstance = this.positiveTrainTimestamps.get(i).indexOf(feedbackValue);
-//                    int indexOfLabelledNegInstance = this.negativeTrainTimestamps.get(i).indexOf(feedbackValue);
-////                    int indexOfLabelledInstance = Math.max(indexOfLabelledNegInstance,indexOfLabelledPosInstance);
-//
-//                    if(indexOfLabelledPosInstance!=-1){
-//                        //TODO: observed label
-//                        int observedLabel = stream.getHeader().numClasses();
-//                        isEvaluated = true;
-//                        Example trainInstI = this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
-//                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledPosInstance);
-//                        evaluators[i].addResult(trainInstI, prediction);
-//                        learners[i].trainOnInstance(trainInstI);
-//                        instancesProcessed++;
-//                    }else if(indexOfLabelledNegInstance!=-1){
-//                        isEvaluated = true;
-//                        Example trainInstI = this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
-//                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
-//                        evaluators[i].addResult(trainInstI, prediction);
-//                        learners[i].trainOnInstance(trainInstI);
-//                        instancesProcessed++;
-//                    }
-//
-//
-//                } else if (evaluationCode == 3) {
-//
-//                }
+                if (evaluationCode == 1){
+
+                } else if (evaluationCode == 2) {
+                    int indexOfLabelledPosInstance = this.positiveTrainTimestamps.get(i).indexOf(feedbackValue);
+                    int indexOfLabelledNegInstance = this.negativeTrainTimestamps.get(i).indexOf(feedbackValue);
+
+                    if(indexOfLabelledPosInstance!=-1){
+                        //TODO: observed label
+                        int observedLabel = stream.getHeader().numClasses();
+                        isEvaluated = true;
+                        Example trainInstI = this.positiveTrainInstances.get(i).remove(indexOfLabelledPosInstance);
+                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledPosInstance);
+                        evaluators[i].addResult(trainInstI, prediction);
+                        learners[i].trainOnInstance(trainInstI);
+                        instancesProcessed++;
+                    }else if(indexOfLabelledNegInstance!=-1){
+                        isEvaluated = true;
+                        Example trainInstI = this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
+                        this.positiveTrainTimestamps.get(i).remove(indexOfLabelledNegInstance);
+                        evaluators[i].addResult(trainInstI, prediction);
+                        learners[i].trainOnInstance(trainInstI);
+                        instancesProcessed++;
+                    }
+
+
+                } else if (evaluationCode == 3) {
+
+                }
 
                 //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
                 //然后立马evaluated
@@ -509,10 +508,11 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         }
 
         return learningCurve;
+
     }
 
 
-/*    public Measurement[] getEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator[] subEvaluators) {
+    public Measurement[] getEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator[] subEvaluators) {
         List<Measurement> measurementList = new LinkedList<>();
         if (modelMeasurements != null) {
             measurementList.addAll(Arrays.asList(modelMeasurements));
@@ -529,7 +529,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             measurementList.addAll(Arrays.asList(avgMeasurements));
         }
         return measurementList.toArray(new Measurement[measurementList.size()]);
-    }*/
+    }
 
     public Measurement[] getFoldEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator subEvaluator, int fold, String timestamp) {
         List<Measurement> measurementList = new LinkedList<>();
