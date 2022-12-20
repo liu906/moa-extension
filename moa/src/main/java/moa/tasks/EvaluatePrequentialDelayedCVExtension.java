@@ -364,10 +364,11 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
                 //然后立马evaluated
                 //随后train by it
-
+                boolean isEvaluated = false;
                 if (this.positiveTrainTimestamps.get(i).size() != 0 &&
                         this.positiveFeedBackTimeOption.getValue() <
                                 (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    isEvaluated = true;
                     Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
                     this.positiveTrainTimestamps.get(i).removeFirst();
                     //TODO: evaluator里面应该带timestamp
@@ -380,16 +381,54 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
                         this.negativeFeedBackTimeOption.getValue() <
                                 (Integer.valueOf(trainInstTimestamp)  - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                    isEvaluated = true;
                     Example trainInstI = this.negativeTrainInstances.get(i).removeFirst();
                     this.negativeTrainTimestamps.get(i).removeFirst();
                     evaluators[i].addResult(testInst, prediction);
                     learners[i].trainOnInstance(trainInstI);
                     instancesProcessed++;
                 }
-            }
-            //System.out.println("instancesProcessed: "+String.valueOf(instancesProcessed));
 
-            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+                if (isEvaluated){
+                    long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
+                    double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
+                    double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
+
+
+                    double RAMHoursIncrement = learners[i].measureByteSize() / (1024.0 * 1024.0 * 1024.0); //GBs
+                    RAMHoursIncrement *= (timeIncrement / 3600.0); //Hours
+                    RAMHours += RAMHoursIncrement;
+
+                    learningFoldCurve.insertEntry(new LearningEvaluation(
+                            getFoldEvaluationMeasurements(
+                                    new Measurement[]{
+                                            new Measurement(
+                                                    "learning evaluation instances on certain fold",
+                                                    instancesProcessed),
+                                            new Measurement(
+                                                    "evaluation time ("
+                                                            + (preciseCPUTiming ? "cpu "
+                                                            : "") + "seconds)",
+                                                    time),
+                                            new Measurement(
+                                                    "model cost (RAM-Hours)",
+                                                    RAMHours)
+                                    }, evaluators[i], i, trainInstTimestamp)));
+
+
+                    if (immediateFoldResultStream != null) {
+                        if (firstFoldDump) {
+                            immediateFoldResultStream.println(learningFoldCurve.headerToString());
+                            firstFoldDump = false;
+                        }
+                        immediateFoldResultStream.println(learningFoldCurve.entryToString(learningFoldCurve.numEntries() - 1));
+                        immediateFoldResultStream.flush();
+                    }
+                }
+            }
+
+
+/*            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
                     || stream.hasMoreInstances() == false)) {
                 long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                 double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
@@ -458,9 +497,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     fold = fold + 1;
                 }
 
+            }*/
 
-
-            }
             if (instancesProcessed != 0 && instancesProcessed % INSTANCES_BETWEEN_MONITOR_UPDATES == 0) {
                 if (monitor.taskShouldAbort()) {
                     return null;
@@ -514,8 +552,10 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         return measurementList.toArray(new Measurement[measurementList.size()]);
     }
 
-    public Measurement[] getFoldEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator subEvaluator, int fold) {
+    public Measurement[] getFoldEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator subEvaluator, int fold, String timestamp) {
         List<Measurement> measurementList = new LinkedList<>();
+        measurementList.add(new Measurement("current timestamp",Double.valueOf(timestamp).longValue()));
+        measurementList.add(new Measurement("fold",fold));
         if (modelMeasurements != null) {
             measurementList.addAll(Arrays.asList(modelMeasurements));
         }
@@ -528,7 +568,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             measurementList.addAll(Arrays.asList(subMeasurements.get(0)));
         }
 
-        measurementList.add(new Measurement("fold",fold));
+
 
         return measurementList.toArray(new Measurement[measurementList.size()]);
     }
