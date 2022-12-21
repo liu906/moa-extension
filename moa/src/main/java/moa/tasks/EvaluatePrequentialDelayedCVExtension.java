@@ -24,7 +24,6 @@ package moa.tasks;
 import com.github.javacliparser.FileOption;
 import com.github.javacliparser.IntOption;
 import com.github.javacliparser.MultiChoiceOption;
-//import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.InstanceImpl;
 import moa.classifiers.MultiClassClassifier;
 import moa.core.*;
@@ -175,11 +174,11 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             Integer.MAX_VALUE);
     public IntOption positiveFeedBackTimeOption = new IntOption(
             "positiveFeedBackTimeLimit", 'P',
-            "how long between instances be predicted as positive and get their observed labels", 86400*7, 0,
+            "how long between instances be predicted as positive and get their observed labels", 86400*90, 0,
             Integer.MAX_VALUE);
     public IntOption negativeFeedBackTimeOption = new IntOption(
             "negativeFeedBackTimeLimit", 'N',
-            "how long between instances be predicted as negative and get their observed labels", 86400*7, 0,
+            "how long between instances be predicted as negative and get their observed labels", 86400*90, 0,
             Integer.MAX_VALUE);
 
     public FileOption dumpFileOption = new FileOption("dumpFile", 'd',
@@ -331,7 +330,6 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(feedbackIndex-1);
                 ((InstanceExample)trainInst).getData().deleteAttributeAt(feedbackIndex);
             }
-            //Example testInst = (Example) trainInst;
 
 
             //分配实例给每个fold
