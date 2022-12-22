@@ -64,7 +64,7 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
 
     protected Estimator[] recall;
 
-    protected int numClasses;
+    public int numClasses;
 
     private Estimator weightCorrectNoChangeClassifier;
 

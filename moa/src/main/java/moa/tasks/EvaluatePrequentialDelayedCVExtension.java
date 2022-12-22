@@ -27,6 +27,7 @@ import com.github.javacliparser.MultiChoiceOption;
 import com.yahoo.labs.samoa.instances.InstanceImpl;
 import moa.classifiers.MultiClassClassifier;
 import moa.core.*;
+import moa.evaluation.BasicClassificationPerformanceEvaluator;
 import moa.evaluation.LearningEvaluation;
 import moa.evaluation.LearningPerformanceEvaluator;
 import moa.evaluation.preview.LearningCurve;
@@ -548,7 +549,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         if ((subEvaluators != null) && (subEvaluators.length > 0)) {
             List<Measurement[]> subMeasurements = new LinkedList<>();
             for (LearningPerformanceEvaluator subEvaluator : subEvaluators) {
-                if (subEvaluator != null) {
+                if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
                     subMeasurements.add(subEvaluator.getPerformanceMeasurements());
                 }
             }
@@ -567,7 +568,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
         }
         List<Measurement[]> subMeasurements = new LinkedList<>();
 
-        if (subEvaluator != null) {
+        if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
             subMeasurements.add(subEvaluator.getPerformanceMeasurements());
            // Measurement[] avgMeasurements = Measurement.averageMeasurements(subMeasurements.toArray(new Measurement[subMeasurements.size()][]));
 
