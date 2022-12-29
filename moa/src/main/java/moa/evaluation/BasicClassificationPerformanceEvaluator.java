@@ -21,12 +21,10 @@
 package moa.evaluation;
 
 import com.github.javacliparser.FlagOption;
+import com.github.javacliparser.FloatOption;
 import moa.capabilities.Capability;
 import moa.capabilities.ImmutableCapabilities;
-import moa.core.Example;
-import moa.core.Measurement;
-import moa.core.ObjectRepository;
-import moa.core.Utils;
+import moa.core.*;
 
 import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.Prediction;
@@ -36,6 +34,7 @@ import moa.tasks.TaskMonitor;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Classification evaluator that performs basic incremental evaluation.
@@ -89,6 +88,9 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     public FlagOption f1PerClassOption = new FlagOption("f1PerClass", 'f',
             "Report F1 per class.");
 
+    public FloatOption noiseOption = new FloatOption("noise",'n',"add noise filter to the prediction result",
+            0,0,1);
+
     @Override
     public void reset() {
         reset(this.numClasses);
@@ -116,11 +118,15 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     @Override
     public void addResult(Example<Instance> example, double[] classVotes) {
         Instance inst = example.getData();
-        //
         double weight = inst.weight();
         if (inst.classIsMissing() == false) {
             int trueClass = (int) inst.classValue();
             int predictedClass = Utils.maxIndex(classVotes);
+            double noise = noiseOption.getValue();
+            if (Math.random()<=noise){
+              // Map<String, Integer> valuesStringAttribute = ((InstanceImpl) ((InstanceExample) example).instance).instanceHeader.getInstanceInformation().attributesInformation.attribute(((InstanceExample) example).instance.classIndex()).valuesStringAttribute;
+                predictedClass = predictedClass==0?1:0;
+            }
             if (weight > 0.0) {
                 if (this.totalWeightObserved == 0) {
                     reset(inst.dataset().numClasses());
