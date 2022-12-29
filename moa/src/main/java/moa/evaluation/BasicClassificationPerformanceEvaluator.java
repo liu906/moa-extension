@@ -62,6 +62,10 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     protected Estimator[] precision;
 
     protected Estimator[] recall;
+    protected Estimator[] recall_weightCorrectNoChangeClassifier;
+    protected Estimator[] recall_weightMajorityClassifier;
+    protected Estimator[] precision_weightCorrectNoChangeClassifier;
+    protected Estimator[] precision_weightMajorityClassifier;
 
     public int numClasses;
 
@@ -102,11 +106,20 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         this.columnKappa = new Estimator[numClasses];
         this.precision = new Estimator[numClasses];
         this.recall = new Estimator[numClasses];
+        this.recall_weightMajorityClassifier = new Estimator[numClasses];
+        this.recall_weightCorrectNoChangeClassifier = new Estimator[numClasses];
+        this.precision_weightMajorityClassifier = new Estimator[numClasses];
+        this.precision_weightCorrectNoChangeClassifier = new Estimator[numClasses];
+
         for (int i = 0; i < this.numClasses; i++) {
             this.rowKappa[i] = newEstimator();
             this.columnKappa[i] = newEstimator();
             this.precision[i] = newEstimator();
             this.recall[i] = newEstimator();
+            this.recall_weightCorrectNoChangeClassifier[i] = newEstimator();
+            this.recall_weightMajorityClassifier[i] = newEstimator();
+            this.precision_weightCorrectNoChangeClassifier[i] = newEstimator();
+            this.precision_weightMajorityClassifier[i] = newEstimator();
         }
         this.weightCorrect = newEstimator();
         this.weightCorrectNoChangeClassifier = newEstimator();
@@ -142,10 +155,23 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                     // How can I fix it?
                     if (predictedClass == i) {
                         precision[i].add(predictedClass == trueClass ? weight : 0.0);
-                    } else precision[i].add(Double.NaN);
+                        precision_weightMajorityClassifier[i].add(getMajorityClass()==trueClass ? weight : 0.0);
+                        precision_weightCorrectNoChangeClassifier[i].add(this.lastSeenClass == trueClass ? weight : 0.0);
+                    } else {
+                        precision[i].add(Double.NaN);
+                        precision_weightMajorityClassifier[i].add(Double.NaN);
+                        precision_weightCorrectNoChangeClassifier[i].add(Double.NaN);
+                    }
+
                     if (trueClass == i) {
                         recall[i].add(predictedClass == trueClass ? weight : 0.0);
-                    } else recall[i].add(Double.NaN);
+                        recall_weightCorrectNoChangeClassifier[i].add(this.lastSeenClass == trueClass ? weight : 0.0);
+                        recall_weightMajorityClassifier[i].add(getMajorityClass() == trueClass ? weight : 0.0);
+                    } else {
+                        recall[i].add(Double.NaN);
+                        recall_weightMajorityClassifier[i].add(Double.NaN);
+                        recall_weightCorrectNoChangeClassifier[i].add(Double.NaN);
+                    }
                 }
             }
             this.weightCorrectNoChangeClassifier.add(this.lastSeenClass == trueClass ? weight : 0);
@@ -174,13 +200,24 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         measurements.add(new Measurement("Kappa Statistic (percent)", this.getKappaStatistic() * 100.0));
         measurements.add(new Measurement("Kappa Temporal Statistic (percent)", this.getKappaTemporalStatistic() * 100.0));
         measurements.add(new Measurement("Kappa M Statistic (percent)", this.getKappaMStatistic() * 100.0));
-        if (precisionRecallOutputOption.isSet()) 
+
+
+        if (precisionRecallOutputOption.isSet())
             measurements.add(new Measurement("F1 Score (percent)", 
                     this.getF1Statistic() * 100.0));
         if (f1PerClassOption.isSet()) {
             for (int i = 0; i < this.numClasses; i++) {
                 measurements.add(new Measurement("F1 Score for class " + i + 
                         " (percent)", 100.0 * this.getF1Statistic(i)));
+            }
+
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Temporal Statistic F1 Score for class " + i +
+                        " (percent)", 100.0 * this.getKappaF1TemporalStatistic(i)));
+            }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa M Statistic F1 Score for class " + i +
+                        " (percent)", 100.0 * this.getKappaF1MStatistic(i)));
             }
         }
         if (precisionRecallOutputOption.isSet())
@@ -191,6 +228,14 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 measurements.add(new Measurement("Precision for class " + i + 
                         " (percent)", 100.0 * this.getPrecisionStatistic(i)));
             }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Precision Temporal Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaPrecisionTemporalStatistic(i)));
+            }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Precision M Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaPrecisionMStatistic(i)));
+            }
         }
         if (precisionRecallOutputOption.isSet())
             measurements.add(new Measurement("Recall (percent)", 
@@ -200,6 +245,22 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 measurements.add(new Measurement("Recall for class " + i + 
                         " (percent)", 100.0 * this.getRecallStatistic(i)));
             }
+            measurements.add(new Measurement("Gmean for recall " +
+                    " (percent)", 100.0 * this.getGmeanStatistic()));
+
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Recall Temporal Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaRecallTemporalStatistic(i)));
+            }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Recall M Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaRecallMStatistic(i)));
+            }
+            measurements.add(new Measurement("Kappa Gmean Temporal Statistic " +
+                    " (percent)", 100.0 * this.getKappaGmeanTemporalStatistic()));
+            measurements.add(new Measurement("Kappa Gmean M Statistic " +
+                    " (percent)", 100.0 * this.getKappaGmeanMStatistic()));
+
         }
 
         Measurement[] result = new Measurement[measurements.size()];
@@ -244,6 +305,54 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
             return 0;
         }
     }
+    public double getKappaGmeanTemporalStatistic() {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getGmeanStatistic();
+            double pc = this.getGmean_weightCorrectNoChangeClassifierStatistic();
+
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
+    public double getKappaRecallTemporalStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getRecallStatistic(numClass);
+            double pc = this.recall_weightCorrectNoChangeClassifier[numClass].estimation();
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
+    public double getKappaPrecisionTemporalStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getPrecisionStatistic(numClass);
+            double pc = this.precision_weightCorrectNoChangeClassifier[numClass].estimation();
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+    public double getKappaF1TemporalStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getF1Statistic(numClass);
+            double pc = this.getF1_weightCorrectNoChangeClassifierStatistic(numClass);
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+    public double getKappaF1MStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getF1Statistic(numClass);
+            double pc = this.getF1_weightMajorityClassifierStatistic(numClass);
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
 
     private double getKappaMStatistic() {
         if (this.getTotalWeightObserved() > 0.0) {
@@ -255,6 +364,39 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
             return 0;
         }
     }
+    private double getKappaGmeanMStatistic() {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getGmeanStatistic();
+            double pc = this.getGmean_weightMajorityClassifierStatistic();
+
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
+    private double getKappaRecallMStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getRecallStatistic(numClass);
+            double pc = this.recall_weightMajorityClassifier[numClass].estimation();
+
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
+    private double getKappaPrecisionMStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getPrecisionStatistic(numClass);
+            double pc = this.precision_weightMajorityClassifier[numClass].estimation();
+
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
 
     public double getPrecisionStatistic() {
         double total = 0;
@@ -280,14 +422,97 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         return this.recall[numClass].estimation();
     }
 
+    public double getPrecision_weightCorrectNoChangeClassifierStatistic() {
+        double total = 0;
+        for (Estimator ck : this.precision_weightCorrectNoChangeClassifier) {
+            total += ck.estimation();
+        }
+        return total / this.precision_weightCorrectNoChangeClassifier.length;
+    }
+
+    public double getPrecision_weightCorrectNoChangeClassifierStatistic(int numClass) {
+        return this.precision_weightCorrectNoChangeClassifier[numClass].estimation();
+    }
+
+    public double getRecall_weightCorrectNoChangeClassifierStatistic() {
+        double total = 0;
+        for (Estimator ck : this.recall_weightCorrectNoChangeClassifier) {
+            total += ck.estimation();
+        }
+        return total / this.recall_weightCorrectNoChangeClassifier.length;
+    }
+
+    public double getRecall_weightCorrectNoChangeClassifierStatistic(int numClass) {
+        return this.recall_weightCorrectNoChangeClassifier[numClass].estimation();
+    }
+
+
+    public double getPrecision_weightMajorityClassifierStatistic() {
+        double total = 0;
+        for (Estimator ck : this.precision_weightMajorityClassifier) {
+            total += ck.estimation();
+        }
+        return total / this.precision_weightMajorityClassifier.length;
+    }
+
+    public double getPrecision_weightMajorityClassifierStatistic(int numClass) {
+        return this.precision_weightMajorityClassifier[numClass].estimation();
+    }
+
+    public double getRecall_weightMajorityClassifierStatistic() {
+        double total = 0;
+        for (Estimator ck : this.recall_weightMajorityClassifier) {
+            total += ck.estimation();
+        }
+        return total / this.recall_weightMajorityClassifier.length;
+    }
+
+    public double getRecall_weightMajorityClassifierStatistic(int numClass) {
+        return this.recall_weightMajorityClassifier[numClass].estimation();
+    }
+
     public double getF1Statistic() {
         return 2 * ((this.getPrecisionStatistic() * this.getRecallStatistic())
                 / (this.getPrecisionStatistic() + this.getRecallStatistic()));
     }
 
+    public double getF1_weightMajorityClassifierStatistic(int numClass) {
+        return 2 * ((this.getPrecision_weightMajorityClassifierStatistic(numClass) * this.getRecall_weightMajorityClassifierStatistic(numClass))
+                / (this.getPrecision_weightMajorityClassifierStatistic(numClass) + this.getRecall_weightMajorityClassifierStatistic(numClass)));
+    }
+
+    public double getF1_weightCorrectNoChangeClassifierStatistic(int numClass) {
+        return 2 * ((this.getPrecision_weightCorrectNoChangeClassifierStatistic(numClass) * this.getRecall_weightCorrectNoChangeClassifierStatistic(numClass))
+                / (this.getPrecision_weightCorrectNoChangeClassifierStatistic(numClass) + this.getRecall_weightCorrectNoChangeClassifierStatistic(numClass)));
+    }
+
     public double getF1Statistic(int numClass) {
         return 2 * ((this.getPrecisionStatistic(numClass) * this.getRecallStatistic(numClass))
                 / (this.getPrecisionStatistic(numClass) + this.getRecallStatistic(numClass)));
+    }
+
+
+
+    public double getGmean_weightMajorityClassifierStatistic(){
+        double gmean = 1;
+        for (int i = 0; i < this.numClasses; i++) {
+            gmean *= this.getRecall_weightMajorityClassifierStatistic(i);
+        }
+        return Math.sqrt(gmean);
+    }
+    public double getGmean_weightCorrectNoChangeClassifierStatistic(){
+        double gmean = 1;
+        for (int i = 0; i < this.numClasses; i++) {
+            gmean *= this.getRecall_weightCorrectNoChangeClassifierStatistic(i);
+        }
+        return Math.sqrt(gmean);
+    }
+    public double getGmeanStatistic(){
+        double gmean = 1;
+        for (int i = 0; i < this.numClasses; i++) {
+            gmean *= this.getRecallStatistic(i);
+        }
+        return Math.sqrt(gmean);
     }
 
     @Override
