@@ -69,6 +69,11 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
 
     public int numClasses;
 
+    public int TP;
+    public int FP;
+    public int TN;
+    public int FN;
+
     private Estimator weightCorrectNoChangeClassifier;
 
     private Estimator weightMajorityClassifier;
@@ -126,6 +131,10 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         this.weightMajorityClassifier = newEstimator();
         this.lastSeenClass = 0;
         this.totalWeightObserved = 0;
+        this.TP = 0;
+        this.FP = 0;
+        this.TN = 0;
+        this.FN = 0;
     }
 
     @Override
@@ -146,6 +155,17 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 }
                 this.totalWeightObserved += weight;
                 this.weightCorrect.add(predictedClass == trueClass ? weight : 0);
+
+                if(predictedClass==1 && trueClass==1){
+                    this.TP += 1;
+                } else if (predictedClass==1 && trueClass==0) {
+                    this.FP += 1;
+                } else if (predictedClass==0 && trueClass==1) {
+                    this.FN += 1;
+                } else if (predictedClass==0 && trueClass==0) {
+                    this.TN += 1;
+                }
+
                 for (int i = 0; i < this.numClasses; i++) {
                     this.rowKappa[i].add(predictedClass == i ? weight : 0);
                     this.columnKappa[i].add(trueClass == i ? weight : 0);
@@ -196,6 +216,12 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     public Measurement[] getPerformanceMeasurements() {
         ArrayList<Measurement> measurements = new ArrayList<Measurement>();
         measurements.add(new Measurement("classified instances", this.getTotalWeightObserved()));
+
+        measurements.add(new Measurement("TP", this.TP));
+        measurements.add(new Measurement("FP", this.FP));
+        measurements.add(new Measurement("TN", this.TN));
+        measurements.add(new Measurement("FN", this.FN));
+
         measurements.add(new Measurement("classifications correct (percent)", this.getFractionCorrectlyClassified() * 100.0));
         measurements.add(new Measurement("Kappa Statistic (percent)", this.getKappaStatistic() * 100.0));
         measurements.add(new Measurement("Kappa Temporal Statistic (percent)", this.getKappaTemporalStatistic() * 100.0));
