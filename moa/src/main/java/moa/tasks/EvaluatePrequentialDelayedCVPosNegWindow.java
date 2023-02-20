@@ -551,7 +551,8 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
             List<Measurement[]> subMeasurements = new LinkedList<>();
             for (LearningPerformanceEvaluator subEvaluator : subEvaluators) {
 
-                if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
+                //if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
+                if (subEvaluator != null) {
                     subMeasurements.add(subEvaluator.getPerformanceMeasurements());
                 }
             }

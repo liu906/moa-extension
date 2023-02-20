@@ -321,6 +321,9 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 
             Example trainInst = stream.nextInstance();
 
+            // TODO: newly added to be check
+            instancesProcessed++;
+
             String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(dateIndex);
             if(dateIndex != dateIndexOption.getMinValue()){
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(dateIndex);
@@ -345,6 +348,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                 //分配实例给每个fold
                 int k = 1;
                 switch (this.validationMethodologyOption.getChosenIndex()) {
+                    // TODO: the update of instancesProcessed may have bug. therefore k is always 1 in case 0 and case 2
                     case 0: //Cross-Validation;
                         k = instancesProcessed % learners.length == i ? 0: 1; //Test all except one
                         break;
@@ -387,7 +391,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 //                        ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
@@ -397,7 +401,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 //                        ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }
                 }
 
@@ -414,7 +418,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 //                    ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
                     evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -427,7 +431,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 //                    ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
 
