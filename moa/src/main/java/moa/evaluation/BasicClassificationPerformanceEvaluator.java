@@ -62,8 +62,11 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
     protected Estimator[] precision;
 
     protected Estimator[] recall;
+    protected Estimator[] fpr;
     protected Estimator[] recall_weightCorrectNoChangeClassifier;
     protected Estimator[] recall_weightMajorityClassifier;
+    protected Estimator[] fpr_weightCorrectNoChangeClassifier;
+    protected Estimator[] fpr_weightMajorityClassifier;
     protected Estimator[] precision_weightCorrectNoChangeClassifier;
     protected Estimator[] precision_weightMajorityClassifier;
 
@@ -111,20 +114,26 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         this.columnKappa = new Estimator[numClasses];
         this.precision = new Estimator[numClasses];
         this.recall = new Estimator[numClasses];
+        this.fpr = new Estimator[numClasses];
         this.recall_weightMajorityClassifier = new Estimator[numClasses];
         this.recall_weightCorrectNoChangeClassifier = new Estimator[numClasses];
         this.precision_weightMajorityClassifier = new Estimator[numClasses];
         this.precision_weightCorrectNoChangeClassifier = new Estimator[numClasses];
+        this.fpr_weightMajorityClassifier = new Estimator[numClasses];
+        this.fpr_weightCorrectNoChangeClassifier = new Estimator[numClasses];
 
         for (int i = 0; i < this.numClasses; i++) {
             this.rowKappa[i] = newEstimator();
             this.columnKappa[i] = newEstimator();
             this.precision[i] = newEstimator();
             this.recall[i] = newEstimator();
+            this.fpr[i] = newEstimator();
             this.recall_weightCorrectNoChangeClassifier[i] = newEstimator();
             this.recall_weightMajorityClassifier[i] = newEstimator();
             this.precision_weightCorrectNoChangeClassifier[i] = newEstimator();
             this.precision_weightMajorityClassifier[i] = newEstimator();
+            this.fpr_weightCorrectNoChangeClassifier[i] = newEstimator();
+            this.fpr_weightMajorityClassifier[i] = newEstimator();
         }
         this.weightCorrect = newEstimator();
         this.weightCorrectNoChangeClassifier = newEstimator();
@@ -192,6 +201,17 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                         recall_weightMajorityClassifier[i].add(Double.NaN);
                         recall_weightCorrectNoChangeClassifier[i].add(Double.NaN);
                     }
+
+                    if (trueClass != i) {
+                        fpr[i].add(predictedClass != trueClass ? weight : 0.0);
+                        fpr_weightCorrectNoChangeClassifier[i].add(this.lastSeenClass != trueClass ? weight : 0.0);
+                        fpr_weightMajorityClassifier[i].add(getMajorityClass() != trueClass ? weight : 0.0);
+                    } else {
+                        fpr[i].add(Double.NaN);
+                        fpr_weightMajorityClassifier[i].add(Double.NaN);
+                        fpr_weightCorrectNoChangeClassifier[i].add(Double.NaN);
+                    }
+
                 }
             }
             this.weightCorrectNoChangeClassifier.add(this.lastSeenClass == trueClass ? weight : 0);
@@ -271,6 +291,11 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 measurements.add(new Measurement("Recall for class " + i + 
                         " (percent)", 100.0 * this.getRecallStatistic(i)));
             }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("FPR for class " + i +
+                        " (percent)", 100.0 * this.getFPRStatistic(i)));
+            }
+
             measurements.add(new Measurement("Gmean for recall " +
                     " (percent)", 100.0 * this.getGmeanStatistic()));
 
@@ -282,10 +307,21 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 measurements.add(new Measurement("Kappa Recall M Statistic " + i +
                         " (percent)", 100.0 * this.getKappaRecallMStatistic(i)));
             }
+
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa FPR Temporal Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaFPRTemporalStatistic(i)));
+            }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa FPR M Statistic " + i +
+                        " (percent)", 100.0 * this.getKappaFPRMStatistic(i)));
+            }
+
             measurements.add(new Measurement("Kappa Gmean Temporal Statistic " +
                     " (percent)", 100.0 * this.getKappaGmeanTemporalStatistic()));
             measurements.add(new Measurement("Kappa Gmean M Statistic " +
                     " (percent)", 100.0 * this.getKappaGmeanMStatistic()));
+
 
         }
 
@@ -351,7 +387,15 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
             return 0;
         }
     }
-
+    public double getKappaFPRTemporalStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getFPRStatistic(numClass);
+            double pc = this.fpr_weightCorrectNoChangeClassifier[numClass].estimation();
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
     public double getKappaPrecisionTemporalStatistic(int numClass) {
         if (this.getTotalWeightObserved() > 0.0) {
             double p0 = getPrecisionStatistic(numClass);
@@ -412,6 +456,17 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         }
     }
 
+    private double getKappaFPRMStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getFPRStatistic(numClass);
+            double pc = this.fpr_weightMajorityClassifier[numClass].estimation();
+
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
     private double getKappaPrecisionMStatistic(int numClass) {
         if (this.getTotalWeightObserved() > 0.0) {
             double p0 = getPrecisionStatistic(numClass);
@@ -446,6 +501,10 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
 
     public double getRecallStatistic(int numClass) {
         return this.recall[numClass].estimation();
+    }
+
+    public double getFPRStatistic(int numClass) {
+        return this.fpr[numClass].estimation();
     }
 
     public double getPrecision_weightCorrectNoChangeClassifierStatistic() {
