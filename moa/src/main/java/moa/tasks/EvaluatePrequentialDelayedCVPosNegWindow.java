@@ -319,6 +319,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
 
 
             Example trainInst = stream.nextInstance();
+            instancesProcessed++;
 
             String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(dateIndex);
             if(dateIndex != dateIndexOption.getMinValue()){
@@ -385,7 +386,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                         ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
@@ -395,7 +396,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                         ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }
                 }
 
@@ -413,7 +414,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                     //observed label of instances predicted as positive is trueLabel
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -426,7 +427,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                     ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
 

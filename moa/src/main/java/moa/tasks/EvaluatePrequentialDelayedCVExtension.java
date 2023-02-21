@@ -319,6 +319,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
 
 
             Example trainInst = stream.nextInstance();
+            instancesProcessed++;
 
             String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(dateIndex);
             if(dateIndex != dateIndexOption.getMinValue()){
@@ -385,7 +386,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
@@ -395,7 +396,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         ((InstanceExample) trainInstI).instance.setClassValue(this.positiveClass);
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
-                        instancesProcessed++;
+//                        instancesProcessed++;
                     }
                 }
 
@@ -412,7 +413,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
                     evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -425,7 +426,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     ((InstanceExample) trainInstI).instance.setClassValue(this.negativeClass);
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
-                    instancesProcessed++;
+//                    instancesProcessed++;
                 }
 
 
