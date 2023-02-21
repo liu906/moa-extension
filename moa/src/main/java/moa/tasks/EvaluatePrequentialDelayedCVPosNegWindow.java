@@ -232,10 +232,12 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
         /* evaluating */
         LearningPerformanceEvaluator[] evaluators = new LearningPerformanceEvaluator[this.numFoldsOption.getValue()];
         LearningPerformanceEvaluator baseEvaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
+        int[] arrInstancesTested = new int[learners.length];
         for (int i = 0; i < learners.length; i++) {
             learners[i] = (Learner) baseLearner.copy();
             learners[i].setModelContext(stream.getHeader());
             evaluators[i] = (LearningPerformanceEvaluator) baseEvaluator.copy();
+            arrInstancesTested[i] = 0;
         }
 
         LearningCurve learningCurve = new LearningCurve(
@@ -246,6 +248,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
 
         int maxInstances = this.instanceLimitOption.getValue();
         long instancesProcessed = 0;
+
         int maxSeconds = this.timeLimitOption.getValue();
         int secondsElapsed = 0;
         monitor.setCurrentActivity("Evaluating learner...", -1.0);
@@ -322,15 +325,15 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
             instancesProcessed++;
 
             String trainInstTimestamp = ((InstanceExample) trainInst).instance.stringValue(dateIndex);
-            if(dateIndex != dateIndexOption.getMinValue()){
+            if (dateIndex != dateIndexOption.getMinValue()) {
                 ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(dateIndex);
-                ((InstanceExample)trainInst).getData().deleteAttributeAt(dateIndex);
+                ((InstanceExample) trainInst).getData().deleteAttributeAt(dateIndex);
             }
 
-            String feedbackValue = ((InstanceExample) trainInst).instance.stringValue(feedbackIndex-1);
-            if(feedbackIndex != feedbackIndexOption.getMinValue()){
-                ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(feedbackIndex-1);
-                ((InstanceExample)trainInst).getData().deleteAttributeAt(feedbackIndex);
+            String feedbackValue = ((InstanceExample) trainInst).instance.stringValue(feedbackIndex - 1);
+            if (feedbackIndex != feedbackIndexOption.getMinValue()) {
+                ((InstanceImpl) ((InstanceExample) trainInst).instance).instanceHeader.getInstanceInformation().deleteAttributeAt(feedbackIndex - 1);
+                ((InstanceExample) trainInst).getData().deleteAttributeAt(feedbackIndex);
             }
 
 
@@ -340,18 +343,19 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
             //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
             //然后立马evaluated
             //随后train by it
+            boolean newEvaluated = false;
             for (int i = 0; i < learners.length; i++) {
                 //分配实例给每个fold
                 int k = 1;
                 switch (this.validationMethodologyOption.getChosenIndex()) {
                     case 0: //Cross-Validation;
-                        k = instancesProcessed % learners.length == i ? 0: 1; //Test all except one
+                        k = instancesProcessed % learners.length == i ? 0 : 1; //Test all except one
                         break;
                     case 1: //Bootstrap;
                         k = MiscUtils.poisson(1, random);
                         break;
                     case 2: //Split-Validation;
-                        k = instancesProcessed % learners.length == i ? 1: 0; //Test only one
+                        k = instancesProcessed % learners.length == i ? 1 : 0; //Test only one
                         break;
                 }
 
@@ -362,10 +366,10 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
 
                 //if predicted label==positive then positiveQueue.add(instance) else negativeQueue.add(instances)
                 if (k > 0) {
-                    if(predictedClass==positiveClass){
+                    if (predictedClass == positiveClass) {
                         this.positiveTrainInstances.get(i).addLast(trainInst);
                         this.positiveTrainTimestamps.get(i).addLast(trainInstTimestamp);
-                    }else{
+                    } else {
                         this.negativeTrainInstances.get(i).addLast(trainInst);
                         this.negativeTrainTimestamps.get(i).addLast(trainInstTimestamp);
                     }
@@ -375,8 +379,8 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                 //如果时间不到但是feedback instance到了. in this case, observed label is positive
                 int indexOfLabelledPosInstance = this.positiveTrainTimestamps.get(i).indexOf(feedbackValue);
                 int indexOfLabelledNegInstance = this.negativeTrainTimestamps.get(i).indexOf(feedbackValue);
-                if(Math.max(indexOfLabelledNegInstance,indexOfLabelledPosInstance)!=-1){
-                    if(indexOfLabelledPosInstance!=-1){
+                if (Math.max(indexOfLabelledNegInstance, indexOfLabelledPosInstance) != -1) {
+                    if (indexOfLabelledPosInstance != -1) {
                         int observedLabel = stream.getHeader().numClasses();
                         isEvaluated = true;
                         Example trainInstI = this.positiveTrainInstances.get(i).get(indexOfLabelledPosInstance);
@@ -387,7 +391,8 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
 //                        instancesProcessed++;
-                    }else if(indexOfLabelledNegInstance!=-1){
+                        arrInstancesTested[i]++;
+                    } else if (indexOfLabelledNegInstance != -1) {
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
                         this.negativeTrainInstances.get(i).remove(indexOfLabelledNegInstance);
@@ -397,6 +402,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
 //                        instancesProcessed++;
+                        arrInstancesTested[i]++;
                     }
                 }
 
@@ -415,11 +421,12 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
 //                    instancesProcessed++;
+                    arrInstancesTested[i]++;
                 }
 
-                if(this.negativeTrainTimestamps.get(i).size() != 0 &&
+                if (this.negativeTrainTimestamps.get(i).size() != 0 &&
                         this.negativeFeedBackTimeOption.getValue() <=
-                                (Integer.valueOf(trainInstTimestamp)  - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
+                                (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.negativeTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
                     isEvaluated = true;
                     Example trainInstI = this.negativeTrainInstances.get(i).removeFirst();
                     this.negativeTrainTimestamps.get(i).removeFirst();
@@ -428,10 +435,12 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
 //                    instancesProcessed++;
+                    arrInstancesTested[i]++;
                 }
 
 
-                if (isEvaluated){
+//                if (isEvaluated) {
+                if (arrInstancesTested[i]!=0) {
                     long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                     double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
                     double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
@@ -446,7 +455,7 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                                     new Measurement[]{
                                             new Measurement(
                                                     "learning evaluation instances on certain fold",
-                                                    instancesProcessed),
+                                                    arrInstancesTested[i]),
                                             new Measurement(
                                                     "evaluation time ("
                                                             + (preciseCPUTiming ? "cpu "
@@ -457,7 +466,6 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                                                     RAMHours)
                                     }, evaluators[i], i, trainInstTimestamp)));
 
-
                     if (immediateFoldResultStream != null) {
                         if (firstFoldDump) {
                             immediateFoldResultStream.println(learningFoldCurve.headerToString());
@@ -467,8 +475,13 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                         immediateFoldResultStream.flush();
                     }
                 }
+
+                if(isEvaluated && !newEvaluated){
+                    newEvaluated = true;
+                }
             }
-            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+
+            if (newEvaluated && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
                     || stream.hasMoreInstances() == false)) {
                 long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                 double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
@@ -553,7 +566,8 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
             for (LearningPerformanceEvaluator subEvaluator : subEvaluators) {
 
                 //if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
-                if (subEvaluator != null) {
+                //((FadingFactorClassificationPerformanceEvaluator) subEvaluator).numClasses
+                if (((BasicClassificationPerformanceEvaluator) subEvaluator).numClasses != 0) {
                     subMeasurements.add(subEvaluator.getPerformanceMeasurements());
                 }
             }

@@ -233,11 +233,14 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
         /* evaluating */
         LearningPerformanceEvaluator[] evaluators = new LearningPerformanceEvaluator[this.numFoldsOption.getValue()];
         LearningPerformanceEvaluator baseEvaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
+        int[] arrInstancesTested = new int[learners.length];
         for (int i = 0; i < learners.length; i++) {
             learners[i] = (Learner) baseLearner.copy();
             learners[i].setModelContext(stream.getHeader());
             evaluators[i] = (LearningPerformanceEvaluator) baseEvaluator.copy();
+            arrInstancesTested[i] = 0;
         }
+
 
         LearningCurve learningCurve = new LearningCurve(
                 "learning evaluation instances");
@@ -344,6 +347,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
             //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
             //然后立马evaluated
             //随后train by it
+            boolean newEvaluated = false;
+
             for (int i = 0; i < learners.length; i++) {
                 //分配实例给每个fold
                 int k = 1;
@@ -392,6 +397,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
 //                        instancesProcessed++;
+                        arrInstancesTested[i]++;
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
@@ -402,6 +408,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                         evaluators[i].addResult(trainInstI, prediction);
                         learners[i].trainOnInstance(trainInstI);
 //                        instancesProcessed++;
+                        arrInstancesTested[i]++;
                     }
                 }
 
@@ -419,6 +426,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                     evaluators[i].addResult(trainInstI, prediction);//原本的evaluators 里面的实例的到达顺序会被我的positive和negative窗口的加入打乱默认的先进先出的顺序
                     learners[i].trainOnInstance(trainInstI);
 //                    instancesProcessed++;
+                    arrInstancesTested[i]++;
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -432,10 +440,12 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                     evaluators[i].addResult(trainInstI, prediction);
                     learners[i].trainOnInstance(trainInstI);
 //                    instancesProcessed++;
+                    arrInstancesTested[i]++;
                 }
 
 
-                if (isEvaluated){
+//                if (isEvaluated) {
+                if (arrInstancesTested[i]!=0) {
                     long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                     double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
                     double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
@@ -450,7 +460,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                                     new Measurement[]{
                                             new Measurement(
                                                     "learning evaluation instances on certain fold",
-                                                    instancesProcessed),
+                                                    arrInstancesTested[i]),
                                             new Measurement(
                                                     "evaluation time ("
                                                             + (preciseCPUTiming ? "cpu "
@@ -471,8 +481,12 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                         immediateFoldResultStream.flush();
                     }
                 }
+                if(isEvaluated && !newEvaluated){
+                    newEvaluated = true;
+                }
             }
-            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+
+            if (newEvaluated && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
                     || stream.hasMoreInstances() == false)) {
                 long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                 double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
