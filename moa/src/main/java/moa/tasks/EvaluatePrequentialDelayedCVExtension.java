@@ -342,6 +342,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
             //如果到时间了就从positiveInstances队列取出来一个赋予他observed label
             //然后立马evaluated
             //随后train by it
+            boolean newEvaluated = false;
             for (int i = 0; i < learners.length; i++) {
                 //分配实例给每个fold
                 int k = 1;
@@ -473,8 +474,15 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         immediateFoldResultStream.flush();
                     }
                 }
+                if(isEvaluated && !newEvaluated){
+                    newEvaluated = true;
+                }
             }
-            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+
+
+//            if (instancesProcessed != 0 && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
+//                    || stream.hasMoreInstances() == false)) {
+            if (newEvaluated && (instancesProcessed % this.sampleFrequencyOption.getValue() == 0
                     || stream.hasMoreInstances() == false)) {
                 long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
                 double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);

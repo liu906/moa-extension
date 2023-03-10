@@ -265,6 +265,10 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
                 measurements.add(new Measurement("Kappa M Statistic F1 Score for class " + i +
                         " (percent)", 100.0 * this.getKappaF1MStatistic(i)));
             }
+            for (int i = 0; i < this.numClasses; i++) {
+                measurements.add(new Measurement("Kappa Statistic F1 Score for class " + i +
+                        " (percent)", 100.0 * this.getKappaF1MStatistic(i)));
+            }
         }
         if (precisionRecallOutputOption.isSet())
             measurements.add(new Measurement("Precision (percent)", 
@@ -415,6 +419,16 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
         }
     }
     public double getKappaF1MStatistic(int numClass) {
+        if (this.getTotalWeightObserved() > 0.0) {
+            double p0 = getF1Statistic(numClass);
+            double pc = this.getF1_weightMajorityClassifierStatistic(numClass);
+            return (p0 - pc) / (1.0 - pc);
+        } else {
+            return 0;
+        }
+    }
+
+    public double getKappaF1Statistic(int numClass) {
         if (this.getTotalWeightObserved() > 0.0) {
             double p0 = getF1Statistic(numClass);
             double pc = this.getF1_weightMajorityClassifierStatistic(numClass);
