@@ -453,45 +453,6 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
 
 
 
-//                if (arrInstancesTested[i]!=0) {
-//                    long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
-//                    double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
-//                    double timeIncrement = TimingUtils.nanoTimeToSeconds(evaluateTime - lastEvaluateStartTime);
-//
-//
-//                    double RAMHoursIncrement = learners[i].measureByteSize() / (1024.0 * 1024.0 * 1024.0); //GBs
-//                    RAMHoursIncrement *= (timeIncrement / 3600.0); //Hours
-//                    RAMHours += RAMHoursIncrement;
-//
-//                    if (arrInstancesTested[i] % this.sampleFrequencyOption.getValue() == 0){
-//                        learningFoldCurve.insertEntry(new LearningEvaluation(
-//                                getFoldEvaluationMeasurements(
-//                                        new Measurement[]{
-//                                                new Measurement(
-//                                                        "learning evaluation instances on certain fold",
-//                                                        arrInstancesTested[i]),
-//                                                new Measurement(
-//                                                        "evaluation time ("
-//                                                                + (preciseCPUTiming ? "cpu "
-//                                                                : "") + "seconds)",
-//                                                        time),
-//                                                new Measurement(
-//                                                        "model cost (RAM-Hours)",
-//                                                        RAMHours)
-//                                        }, evaluators[i], i, trainInstTimestamp)));
-//
-//                        if (immediateFoldResultStream != null) {
-//                            if (firstFoldDump) {
-//                                immediateFoldResultStream.println(learningFoldCurve.headerToString());
-//                                firstFoldDump = false;
-//                            }
-//                            immediateFoldResultStream.println(learningFoldCurve.entryToString(learningFoldCurve.numEntries() - 1));
-//                            immediateFoldResultStream.flush();
-//                        }
-//
-//                    }
-//
-//                }
 
                 if(isEvaluated && !newEvaluated){
                     newEvaluated = true;
