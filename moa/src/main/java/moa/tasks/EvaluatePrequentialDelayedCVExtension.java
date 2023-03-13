@@ -218,6 +218,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
     public Class<?> getTaskResultType() {
         return LearningCurve.class;
     }
+    public static boolean firstFoldDump = true;
 
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
@@ -307,7 +308,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         "Unable to open immediate result file: " + dumpFoldFile, ex);
             }
         }
-        boolean firstFoldDump = true;
+//        static boolean firstFoldDump = true;
 
 
         boolean preciseCPUTiming = TimingUtils.enablePreciseTiming();
@@ -392,8 +393,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         arrInstancesTested[i]++;
                         addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                                 learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                                immediateFoldResultStream, firstFoldDump);
-                        firstFoldDump = false;
+                                immediateFoldResultStream);
+
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
                         Example trainInstI = this.negativeTrainInstances.get(i).get(indexOfLabelledNegInstance);
@@ -406,8 +407,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                         arrInstancesTested[i]++;
                         addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                                 learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                                immediateFoldResultStream, firstFoldDump);
-                        firstFoldDump = false;
+                                immediateFoldResultStream);
+
                     }
                 }
 
@@ -426,8 +427,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     arrInstancesTested[i]++;
                     addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                             learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                            immediateFoldResultStream, firstFoldDump);
-                    firstFoldDump = false;
+                            immediateFoldResultStream);
+
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -442,8 +443,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                     arrInstancesTested[i]++;
                     addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                             learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                            immediateFoldResultStream, firstFoldDump);
-                    firstFoldDump = false;
+                            immediateFoldResultStream);
+
                 }
 
                 if(isEvaluated && !newEvaluated){
@@ -529,8 +530,8 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
     public void addEvaluationOnFoldLevel(int[] arrInstancesTested,int i,long evaluateStartTime,long lastEvaluateStartTime,
                                          Learner[] learners,double RAMHours,LearningCurveExtension learningFoldCurve,
                                          boolean preciseCPUTiming,LearningPerformanceEvaluator[] evaluators,String trainInstTimestamp,
-                                         PrintStream immediateFoldResultStream,
-                                         boolean firstFoldDump){
+                                         PrintStream immediateFoldResultStream
+                                         ){
         if (arrInstancesTested[i]!=0) {
             long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
             double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);

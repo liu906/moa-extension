@@ -219,7 +219,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
     public Class<?> getTaskResultType() {
         return LearningCurve.class;
     }
-
+    public static boolean firstFoldDump = true;
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         int feedbackIndex= this.feedbackIndexOption.getValue();
@@ -397,8 +397,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                         arrInstancesTested[i]++;
                         addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                                 learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                                immediateFoldResultStream, firstFoldDump);
-                        firstFoldDump = false;
+                                immediateFoldResultStream);
+
 
                     }else if(indexOfLabelledNegInstance!=-1){
                         isEvaluated = true;
@@ -410,8 +410,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                         arrInstancesTested[i]++;
                         addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                                 learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                                immediateFoldResultStream, firstFoldDump);
-                        firstFoldDump = false;
+                                immediateFoldResultStream);
+
                     }
                 }
 
@@ -429,8 +429,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                     arrInstancesTested[i]++;
                     addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                             learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                            immediateFoldResultStream, firstFoldDump);
-                    firstFoldDump = false;
+                            immediateFoldResultStream);
+
                 }
 
                 if(this.negativeTrainTimestamps.get(i).size() != 0 &&
@@ -444,8 +444,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
                     arrInstancesTested[i]++;
                     addEvaluationOnFoldLevel(arrInstancesTested,i,evaluateStartTime,lastEvaluateStartTime,
                             learners,RAMHours,learningFoldCurve,preciseCPUTiming,evaluators,trainInstTimestamp,
-                            immediateFoldResultStream, firstFoldDump);
-                    firstFoldDump = false;
+                            immediateFoldResultStream);
+
                 }
 
                 if(isEvaluated && !newEvaluated){
@@ -528,8 +528,7 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
     public void addEvaluationOnFoldLevel(int[] arrInstancesTested,int i,long evaluateStartTime,long lastEvaluateStartTime,
                                          Learner[] learners,double RAMHours,LearningCurveExtension learningFoldCurve,
                                          boolean preciseCPUTiming,LearningPerformanceEvaluator[] evaluators,String trainInstTimestamp,
-                                         PrintStream immediateFoldResultStream,
-                                         boolean firstFoldDump){
+                                         PrintStream immediateFoldResultStream){
         if (arrInstancesTested[i]!=0) {
             long evaluateTime = TimingUtils.getNanoCPUTimeOfCurrentThread();
             double time = TimingUtils.nanoTimeToSeconds(evaluateTime - evaluateStartTime);
