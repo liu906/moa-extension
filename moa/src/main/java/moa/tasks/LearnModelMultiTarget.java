@@ -64,6 +64,10 @@ public class LearnModelMultiTarget extends MultiTargetMainTask {
             "How many instances between memory bound checks.", 100000, 0,
             Integer.MAX_VALUE);
 
+    public IntOption randomSeedOption = new IntOption(
+            "instanceRandomSeed", 'r',
+            "Seed for random generation of instances.", 1);
+
     public LearnModelMultiTarget() {
     }
 
@@ -83,6 +87,10 @@ public class LearnModelMultiTarget extends MultiTargetMainTask {
     @Override
     public Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         Learner learner = (Learner) getPreparedClassOption(this.learnerOption);
+        if (learner.isRandomizable()) {
+            learner.setRandomSeed(this.randomSeedOption.getValue());
+            learner.resetLearning();
+        }
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
         learner.setModelContext(stream.getHeader());
         int numPasses = this.numPassesOption.getValue();

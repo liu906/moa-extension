@@ -62,6 +62,9 @@ public class EvaluateInterleavedChunks extends ClassificationMainTask {
 			"Stream to learn from.", ExampleStream.class,
 			"generators.RandomTreeGenerator");
 
+	public IntOption randomSeedOption = new IntOption(
+			"instanceRandomSeed", 'r',
+			"Seed for random generation of instances.", 1);
 	/**
 	 * Allows to select the classifier performance evaluation method.
 	 */
@@ -130,6 +133,10 @@ public class EvaluateInterleavedChunks extends ClassificationMainTask {
 	@Override
 	protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
 		Learner learner = (Learner) getPreparedClassOption(this.learnerOption);
+		if (learner.isRandomizable()) {
+			learner.setRandomSeed(this.randomSeedOption.getValue());
+			learner.resetLearning();
+		}
 		ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
 		LearningPerformanceEvaluator evaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
 		learner.setModelContext(stream.getHeader());

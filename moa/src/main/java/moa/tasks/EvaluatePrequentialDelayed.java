@@ -130,6 +130,10 @@ public class EvaluatePrequentialDelayed extends ClassificationMainTask {
     public FloatOption alphaOption = new FloatOption("alpha",
             'a', "Fading factor or exponential smoothing factor", .01);
 
+    public IntOption randomSeedOption = new IntOption(
+            "instanceRandomSeed", 'r',
+            "Seed for random generation of instances.", 1);
+
     // Buffer of instances to use for training. 
     protected LinkedList<Example> trainInstances;
     
@@ -141,6 +145,10 @@ public class EvaluatePrequentialDelayed extends ClassificationMainTask {
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         Learner learner = (Learner) getPreparedClassOption(this.learnerOption);
+        if (learner.isRandomizable()) {
+            learner.setRandomSeed(this.randomSeedOption.getValue());
+            learner.resetLearning();
+        }
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
         LearningPerformanceEvaluator evaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
         LearningCurve learningCurve = new LearningCurve(

@@ -69,6 +69,10 @@ public class EvaluatePeriodicHeldOutTest extends ClassificationMainTask {
             "Stream to learn from.", ExampleStream.class,
             "generators.RandomTreeGenerator");
 
+    public IntOption randomSeedOption = new IntOption(
+            "instanceRandomSeed", 'r',
+            "Seed for random generation of instances.", 1);
+
     public ClassOption evaluatorOption = new ClassOption("evaluator", 'e',
             "Learning performance evaluation method.",
             LearningPerformanceEvaluator.class,
@@ -99,6 +103,10 @@ public class EvaluatePeriodicHeldOutTest extends ClassificationMainTask {
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         Learner learner = (Learner) getPreparedClassOption(this.learnerOption);
+        if (learner.isRandomizable()) {
+            learner.setRandomSeed(this.randomSeedOption.getValue());
+            learner.resetLearning();
+        }
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
         LearningPerformanceEvaluator evaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
         learner.setModelContext(stream.getHeader());

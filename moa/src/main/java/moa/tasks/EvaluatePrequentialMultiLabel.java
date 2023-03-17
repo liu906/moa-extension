@@ -111,6 +111,10 @@ public class EvaluatePrequentialMultiLabel extends MultiLabelMainTask {
             'a', "Fading factor or exponential smoothing factor", .01);
     //End New for prequential methods
 
+    public IntOption randomSeedOption = new IntOption(
+            "instanceRandomSeed", 'r',
+            "Seed for random generation of instances.", 1);
+
     @Override
     public Class<?> getTaskResultType() {
         return LearningCurve.class;
@@ -119,6 +123,10 @@ public class EvaluatePrequentialMultiLabel extends MultiLabelMainTask {
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         Learner learner = (Learner) getPreparedClassOption(this.learnerOption);
+        if (learner.isRandomizable()) {
+            learner.setRandomSeed(this.randomSeedOption.getValue());
+            learner.resetLearning();
+        }
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
         LearningPerformanceEvaluator evaluator = (LearningPerformanceEvaluator) getPreparedClassOption(this.evaluatorOption);
         LearningCurve learningCurve = new LearningCurve(

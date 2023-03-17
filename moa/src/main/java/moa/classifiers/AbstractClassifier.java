@@ -164,6 +164,7 @@ public abstract class AbstractClassifier extends AbstractOptionHandler
             this.classifierRandom = new Random(this.randomSeed);
         }
         resetLearningImpl();
+
     }
 
     @Override

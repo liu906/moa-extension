@@ -202,7 +202,8 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
 
     public IntOption randomSeedOption = new IntOption("randomSeed", 'r',
             "Seed for random behaviour of the task.", 1);
-
+    public IntOption bvRandomSeedOption = new IntOption("bootStrapValidationRandomSeed", 'x',
+            "Seed for random behaviour of the task.", 1);
     protected int positiveClass = 1;
     protected int negativeClass = 0;
 
@@ -223,12 +224,16 @@ public class EvaluatePrequentialDelayedCVIdeal extends ClassificationMainTask {
     @Override
     protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
         int feedbackIndex= this.feedbackIndexOption.getValue();
-        Random random = new Random(this.randomSeedOption.getValue());
+        Random random = new Random(this.bvRandomSeedOption.getValue());
         ExampleStream stream = (ExampleStream) getPreparedClassOption(this.streamOption);
 
         Learner[] learners = new Learner[this.numFoldsOption.getValue()];
         Learner baseLearner = (Learner) getPreparedClassOption(this.learnerOption);
-        baseLearner.resetLearning();
+        if (baseLearner.isRandomizable()) {
+            baseLearner.setRandomSeed(this.randomSeedOption.getValue());
+            baseLearner.resetLearning();
+        }
+//        baseLearner.resetLearning();
 
         /* evaluating */
         LearningPerformanceEvaluator[] evaluators = new LearningPerformanceEvaluator[this.numFoldsOption.getValue()];
