@@ -156,7 +156,7 @@ public class BasicClassificationPerformanceEvaluator extends AbstractOptionHandl
             double noise = noiseOption.getValue();
             if (Math.random()<=noise){
               // Map<String, Integer> valuesStringAttribute = ((InstanceImpl) ((InstanceExample) example).instance).instanceHeader.getInstanceInformation().attributesInformation.attribute(((InstanceExample) example).instance.classIndex()).valuesStringAttribute;
-                predictedClass = predictedClass==0?1:0;
+                predictedClass = (predictedClass==0) ? 1:0;
             }
             if (weight > 0.0) {
                 if (this.totalWeightObserved == 0) {
