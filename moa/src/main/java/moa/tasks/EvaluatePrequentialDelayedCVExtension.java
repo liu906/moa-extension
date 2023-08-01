@@ -486,7 +486,7 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
                                         new Measurement(
                                                 "model cost (RAM-Hours)",
                                                 RAMHours)
-                                }, evaluators)));
+                                }, evaluators,trainInstTimestamp)));
 
                 if (immediateResultStream != null) {
                     if (firstDump) {
@@ -577,8 +577,9 @@ public class EvaluatePrequentialDelayedCVExtension extends ClassificationMainTas
 
         }
     }
-    public Measurement[] getEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator[] subEvaluators) {
+    public Measurement[] getEvaluationMeasurements(Measurement[] modelMeasurements, LearningPerformanceEvaluator[] subEvaluators, String timestamp) {
         List<Measurement> measurementList = new LinkedList<>();
+        measurementList.add(new Measurement("current timestamp",Double.valueOf(timestamp).longValue()));
         if (modelMeasurements != null) {
             measurementList.addAll(Arrays.asList(modelMeasurements));
         }
