@@ -74,9 +74,9 @@ The delay time of observed label arriving for instances predicted as positive an
     java -classpath "classes" moa.DoTask EvaluatePrequentialDelayedCVPosNegWindow -l trees.HoeffdingTree -s "(ArffFileStream" -f "brackets.arff)" -e "(FadingFactorClassificationPerformanceEvaluator" -a 0.99  -n 0 -o -p -r "-f)" -k 99 -f 30 -q 30 -d "dumpFile.csv" -o "detail.csv" -a Bootstrap-Validation -D 0 -w 10 -A 1 -r 1 -P 86400 -N 1296000
 
 
-`dumpFile.csv` is where you store the average value of performances across k folds  
-`detail.csv` is where you store the value of performances on each k folds  
-`-P` set the observed label delay time of instance predicted as positive, unit is second
-`-N` set the observed label delay time of instance predicted as negative, unit is second
-`-r` in evaluation class set the random seed of online classifier, only works if the classifier has randomness. For example, `-r 1` means random seed is set to 1.
-`-n` in FadingFactorClassificationPerformanceEvaluator set the classification noise of a classifier. For example, `-n 0.05` means a classifier reverses its predicted labels with 5% probability (designed for binary classification problems only). This feature is designed for specific academic experiments. Know more from [its application in online software defect prediction](https://github.com/liu906/HITL-Online-Just-in-Time-Defect-Prediction)    
+`dumpFile.csv` is where you store the average value of performances across k folds    
+`detail.csv` is where you store the value of performances on each k folds    
+`-P` set the observed label delay time of instance predicted as positive, unit is second  
+`-N` set the observed label delay time of instance predicted as negative, unit is second  
+`-r` in evaluation class set the random seed of online classifier, only works if the classifier has randomness. For example, `-r 1` means random seed is set to 1.  
+`-n` in FadingFactorClassificationPerformanceEvaluator set the classification noise of a classifier. For example, `-n 0.05` means a classifier reverses its predicted labels with 5% probability (designed for binary classification problems only). This feature is designed for specific academic experiments. Know more from [its application in online software defect prediction](https://github.com/liu906/HITL-Online-Just-in-Time-Defect-Prediction)     
