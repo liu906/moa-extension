@@ -22,8 +22,10 @@
 package moa.tasks;
 
 import com.github.javacliparser.FileOption;
+import com.github.javacliparser.FloatOption;
 import com.github.javacliparser.IntOption;
 import com.github.javacliparser.MultiChoiceOption;
+import com.yahoo.labs.samoa.instances.Instance;
 import com.yahoo.labs.samoa.instances.InstanceImpl;
 import moa.classifiers.MultiClassClassifier;
 import moa.core.*;
@@ -35,6 +37,8 @@ import moa.evaluation.preview.LearningCurveExtension;
 import moa.learners.Learner;
 import moa.options.ClassOption;
 import moa.streams.ExampleStream;
+import com.yahoo.labs.samoa.instances.Instance;
+import com.yahoo.labs.samoa.instances.Prediction;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -203,6 +207,8 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
             "Seed for random behaviour of the task.", 1);
     public IntOption bvRandomSeedOption = new IntOption("bootStrapValidationRandomSeed", 'x',
             "Seed for random behaviour of the task.", 1);
+    public FloatOption humanNoiseOption = new FloatOption("humanNoise",'h',"add human noise to the observed label for positive commit",
+            0,0,1);
     protected int positiveClass = 1;
     protected int negativeClass = 0;
 
@@ -428,6 +434,16 @@ public class EvaluatePrequentialDelayedCVPosNegWindow extends ClassificationMain
                                 (Integer.valueOf(trainInstTimestamp) - Integer.valueOf(this.positiveTrainTimestamps.get(i).getFirst()))) {//把.size改成.timestamp是不是就可以实现QAtimeWindow了
                     isEvaluated = true;
                     Example trainInstI = this.positiveTrainInstances.get(i).removeFirst();
+                    // TODO: reverse label by human noise
+                    Instance inst = (Instance) trainInstI.getData();
+                    int trueClass = (int) inst.classValue();
+                    double humanNoise = humanNoiseOption.getValue();
+                    if (Math.random()<=humanNoise){
+                        // Map<String, Integer> valuesStringAttribute = ((InstanceImpl) ((InstanceExample) example).instance).instanceHeader.getInstanceInformation().attributesInformation.attribute(((InstanceExample) example).instance.classIndex()).valuesStringAttribute;
+                        trueClass = (trueClass==0) ? 1:0;
+                    }
+                    ((InstanceExample) trainInstI).instance.setClassValue(trueClass);
+
                     this.positiveTrainTimestamps.get(i).removeFirst();
                     //observed label of instances predicted as positive is trueLabel
                     evaluators[i].addResult(trainInstI, prediction);
