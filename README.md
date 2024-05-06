@@ -11,25 +11,26 @@ Based on EvaluatePrequentialDelayedCV class, we add three new java files for del
 ### A. new features of delayed cv prequential evaluation
 Those three java classes have the following new features:
 #### 1.two time window to separately control the delayed labels of instances predicted as positive and negative. 
-In many field, such as fraud detection and software defect prediction, the true label cannot be obtained when the instance come to the data stream. More important,instances predicted as positive will be inspected and labeled manually and relatively fast through the check phone call for fraud detection or SQA inspection for software defect prediction. Therefore, in this extension, a shortWaitingWindow is added to control this procedure. Moreover, instances predicted as negative will be labelled as positive if the true label arrive before a verification latency time window, or labelled as negative if the verification latency time have been consumed. Therefore, in this extension, a longWaitingWindow is added to control this procedure.
+In many fields, such as fraud detection and software commit prediction (whether a git commit is bug-inducing or not), instances predicted as positive will be inspected and labeled manually and relatively fast through the check phone call for fraud detection or human inspection for software commit prediction. Therefore, instances predicted as positive and negative are sent to two separate queues, to wait for their delayed ground truth labels with different values of waiting time window. I use a new class EvaluatePrequentialDelayedCVPosNegWindow as a replacement for EvaluatePrequentialDelayedCV to support the above process. 
+
 
 #### 2.Finer control of time window units.
-MOA only supports the number of instances as the parameter of "delayed". However, in real-world, when we ask "how long will it take for the label of the current instance to reach", the answer is usually in terms of time, such as "after one day" or "after two months", rather than in terms of number of instances, such as "after 1000 other instances". Therefore, this extension allow users using the timestamps in their data stream to set time windows.
+MOA only supports the number of instances as the parameter of "delayed". However, in real-world, when we ask "How long will it take for the label of the current instance to reach", the answer is usually in terms of time, such as "after one day" or "after two months", rather than in terms of the number of instances, such as "after 1000 other instances". Therefore, my extension allows users to use the timestamps in their data stream to set time windows.
+
  
  #### 3. Modify the task procedure to adapt to the real-world scenario. 
-  MOA does a task in the following steps:  
-  (1) test the instance to obtain the y_pred
-  (2) evaluate the instance by its y_pred and its true label y_true  
-  (3) wait for delay and then train the model by its true label and its features  
- 
- Note that for a scenario that the observed true label can only arrive after a delay, you cannot evaluate model by the observed true label before the delay.  
+MOA does a task in the following steps:
+(1) test the instance to obtain the y_pred 
+(2) evaluate the instance by its y_pred and its true label y_true 
+(3) wait for time delay and then train the model by its true label and its features
 
+Note that for certain scenarios, the observed true label can only arrive after a delay, we cannot evaluate a classifier by the observed true label before the given time delay.
 
- To make the task work in real situations, the extension works as:  
-  (1) test the instance to obtain the y_pred  
-  (2) wait for delay to obtain the observed y_true  
-  (3) evaluate the instance by its y_pred and y_true  
-  (4) train the model by its true label and its features  
+To make MOA support the above task, my MOA extension works as:
+(1) test the instance to obtain the y_pred
+(2) wait for the time delay and then obtain the observed y_true
+(3) evaluate the instance by its y_pred and y_true
+(4) train the model by its true label and its features
  
 #### 4. Support detailed evaluation results on each fold  
 
@@ -53,7 +54,7 @@ In MOA, tasks whose names contain "CV" provided online distributed evaluation th
 
 
 ### B. add a new parameter to control random seed of online classifiers 
-The MOA framework (until 2023/3/17) only provided control of random seed for stream validation before, although the have desiged several classifiers with randomness, their random seeds cannot be controled directly through a parameter in command line running. Therefore, I added a parameter called **'-x'** to control the random seed of bootstrap validation, and parameter **'-r'** is changed to control the random seed of classifier with randomness now.
+The MOA framework (until 2023/3/17) only provided control of random seeds for stream validation before, although it has designed several classifiers with randomness, their random seeds cannot be controlled directly through a parameter in the command line running. Therefore, I added a parameter called **'-x'** to control the random seed of bootstrap validation, and parameter **'-r'** is changed to control the random seed of classifier with randomness now.
 
 ## Example of three extended evaluation procedures
 ### EvaluatePrequentialDelayedCVExtension
